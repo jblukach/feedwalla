@@ -242,7 +242,8 @@ class FeedwallaStack(Stack):
             handler = 'export.handler',
             environment = dict(
                 AWS_ACCOUNT = account,
-                FIREWALLA_API = '/firewalla/api'
+                FIREWALLA_API = '/firewalla/api',
+                FIREWALLA_WEB = '/firewalla/web'
             ),
             timeout = Duration.seconds(900),
             retry_attempts = 0,
