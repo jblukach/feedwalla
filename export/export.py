@@ -60,11 +60,23 @@ def handler(event, context):
         pass
 
     addrs = list(set(addrs))
+    print('Blocked IPs:', str(len(addrs)))
 
+    ttl = int(datetime.datetime.now(datetime.timezone.utc).timestamp()) + 86400
 
+    dynamodb = boto3.resource('dynamodb')
+    table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 
+    for addr in addrs:
 
-
+        table.put_item(
+            Item = {
+                'pk': 'IP#',
+                'sk': 'IP#'+str(addr),
+                'ip': str(addr),
+                'ttl': ttl
+            }
+        )
 
     return {
         'statusCode': 200,
