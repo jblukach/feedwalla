@@ -37,7 +37,8 @@ def handler(event, context):
     j = r.json()
 
     for i in j['results']:
-        addrs.append(i['source']['ip'])
+        if i['category'] == 'intel':
+            addrs.append(i['source']['ip'])
 
     try:
 
@@ -49,7 +50,8 @@ def handler(event, context):
             j = r.json()
 
             for i in j['results']:
-                addrs.append(i['source']['ip'])
+                if i['category'] == 'intel':
+                    addrs.append(i['source']['ip'])
 
             try:
                 params['cursor'] = j['next_cursor']

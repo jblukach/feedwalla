@@ -246,6 +246,7 @@ class FeedwallaStack(Stack):
             _iam.PolicyStatement(
                 actions = [
                     'dynamodb:PutItem',
+                    'dynamodb:Query',
                     'ssm:GetParameter'
                 ],
                 resources = [
@@ -299,8 +300,8 @@ class FeedwallaStack(Stack):
             _actions.SnsAction(topic)
         )
 
-        event = _events.Rule(
-            self, 'event',
+        exportevent = _events.Rule(
+            self, 'exportevent',
             schedule = _events.Schedule.cron(
                 minute = '*/5',
                 hour = '*',
@@ -310,6 +311,65 @@ class FeedwallaStack(Stack):
             )
         )
 
-        event.add_target(
+        exportevent.add_target(
             _targets.LambdaFunction(export)
+        )
+
+    ### RELEASE LAMBDA ###
+
+        release = _lambda.Function(
+            self, 'release',
+            runtime = _lambda.Runtime.PYTHON_3_12,
+            architecture = _lambda.Architecture.ARM_64,
+            code = _lambda.Code.from_asset('release'),
+            handler = 'release.handler',
+            environment = dict(
+                AWS_ACCOUNT = account,
+                DYNAMODB_TABLE = table.table_name,
+                GITHUB_API = '/github/releases'
+            ),
+            timeout = Duration.seconds(900),
+            retry_attempts = 0,
+            memory_size = 512,
+            role = role,
+            layers = [
+                getpublicip,
+                requests
+            ]
+        )
+
+        releaselogs = _logs.LogGroup(
+            self, 'releaselogs',
+            log_group_name = '/aws/lambda/'+release.function_name,
+            retention = _logs.RetentionDays.ONE_DAY,
+            removal_policy = RemovalPolicy.DESTROY
+        )
+
+        releasealarm = _cloudwatch.Alarm(
+            self, 'releasealarm',
+            comparison_operator = _cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+            threshold = 0,
+            evaluation_periods = 1,
+            metric = release.metric_errors(
+                period = Duration.minutes(1)
+            )
+        )
+
+        releasealarm.add_alarm_action(
+            _actions.SnsAction(topic)
+        )
+
+        releaseevent = _events.Rule(
+            self, 'releaseevent',
+            schedule = _events.Schedule.cron(
+                minute = '0',
+                hour = '*',
+                month = '*',
+                week_day = '*',
+                year = '*'
+            )
+        )
+
+        releaseevent.add_target(
+            _targets.LambdaFunction(release)
         )
