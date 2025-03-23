@@ -25,6 +25,15 @@ def handler(event, context):
         'Content-Type': 'application/json'
     }
 
+    publicips = []
+
+    url = web['Parameter']['Value']+'/v2/boxes'
+
+    r = requests.get(url, headers=headers)
+
+    for i in r.json():
+        publicips.append(i['publicIP'])
+
     url = web['Parameter']['Value']+'/v2/flows'
 
     params = {
@@ -69,14 +78,16 @@ def handler(event, context):
 
     for addr in addrs:
 
-        table.put_item(
-            Item = {
-                'pk': 'IP#',
-                'sk': 'IP#'+str(addr),
-                'ip': str(addr),
-                'ttl': ttl
-            }
-        )
+        if addr not in publicips:
+
+            table.put_item(
+                Item = {
+                    'pk': 'IP#',
+                    'sk': 'IP#'+str(addr),
+                    'ip': str(addr),
+                    'ttl': ttl
+                }
+            )
 
     return {
         'statusCode': 200,
