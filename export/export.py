@@ -17,8 +17,8 @@ def handler(event, context):
         Name = os.environ['FIREWALLA_WEB']
     )
 
-    addrs = []
-    epoch = int(datetime.datetime.now(datetime.timezone.utc).timestamp()) - 600
+    logs = []
+    epoch = int(datetime.datetime.now(datetime.timezone.utc).timestamp()) - 360 # last six minutes
 
     headers = {
         'Authorization': 'Token '+api['Parameter']['Value'],
@@ -32,13 +32,15 @@ def handler(event, context):
     r = requests.get(url, headers=headers)
 
     for i in r.json():
+        print(i)
+        print('------')
         publicips.append(i['publicIP'])
 
     url = web['Parameter']['Value']+'/v2/flows'
 
     params = {
         'cursor': None,
-        'limit': 500,
+        'limit': 1, #500,
         'query': 'ts:>'+str(epoch)+' Status:Blocked Direction:Inbound -Box:"Road Warrior"'
     }
 
@@ -46,48 +48,54 @@ def handler(event, context):
     j = r.json()
 
     for i in j['results']:
-        addrs.append(i['source']['ip'])
+        print(i)
+        print(i['ts'])
+        # convert ts epoch to 2002-01-24 23:10:05 -00:00 format
+        print(datetime.datetime.fromtimestamp(i['ts'], datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S %z'))
 
-    try:
+        print(i['count'])
+        print(i['protocol'])
+        
+        print(i['source']['ip'])
+        print(i['source']['portInfo']['port'])
+        print(i['destination']['ip'])
+        print(i['destination']['portInfo']['port'])
 
-        params['cursor'] = j['next_cursor']
 
-        while j['next_cursor'] != None:
 
-            r = requests.get(url, headers=headers, params=params)
-            j = r.json()
+#time
+#flags
+#dip
+#sip
+#version
+#proto
+#sport
+#dport
+#count
 
-            for i in j['results']:
-                addrs.append(i['source']['ip'])
 
-            try:
-                params['cursor'] = j['next_cursor']
-            except:
-                break
+    #try:
 
-    except:
-        pass
+    #    params['cursor'] = j['next_cursor']
 
-    addrs = list(set(addrs))
-    print('Blocked IPs:', str(len(addrs)))
+    #    while j['next_cursor'] != None:
 
-    ttl = int(datetime.datetime.now(datetime.timezone.utc).timestamp()) + 86400
+    #        r = requests.get(url, headers=headers, params=params)
+    #        j = r.json()
 
-    dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
+    #        for i in j['results']:
+    #            addrs.append(i['source']['ip'])
 
-    for addr in addrs:
+    #        try:
+    #            params['cursor'] = j['next_cursor']
+    #        except:
+    #            break
 
-        if addr not in publicips:
+    #except:
+    #    pass
 
-            table.put_item(
-                Item = {
-                    'pk': 'IP#',
-                    'sk': 'IP#'+str(addr),
-                    'ip': str(addr),
-                    'ttl': ttl
-                }
-            )
+
+
 
     return {
         'statusCode': 200,
