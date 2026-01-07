@@ -6,41 +6,36 @@ import requests
 
 def handler(event, context):
     
-    ssm = boto3.client('ssm')
+    secret = boto3.client('secretsmanager')
 
-    api = ssm.get_parameter(
-        Name = os.environ['FIREWALLA_API'], 
-        WithDecryption = True
+    getsecret = secret.get_secret_value(
+        SecretId = os.environ['SECRET_MGR_ARN']
     )
 
-    web = ssm.get_parameter(
-        Name = os.environ['FIREWALLA_WEB']
-    )
+    login = json.loads(getsecret['SecretString'])
 
-    logs = []
-    epoch = int(datetime.datetime.now(datetime.timezone.utc).timestamp()) - 360 # last six minutes
+    addrs = []
+    epoch = int(datetime.datetime.now(datetime.timezone.utc).timestamp()) - 600
 
     headers = {
-        'Authorization': 'Token '+api['Parameter']['Value'],
+        'Authorization': 'Token '+login['token'],
         'Content-Type': 'application/json'
     }
 
     publicips = []
 
-    url = web['Parameter']['Value']+'/v2/boxes'
+    url = login['url']+'/v2/boxes'
 
     r = requests.get(url, headers=headers)
 
     for i in r.json():
-        print(i)
-        print('------')
         publicips.append(i['publicIP'])
 
-    url = web['Parameter']['Value']+'/v2/flows'
+    url = login['url']+'/v2/flows'
 
     params = {
         'cursor': None,
-        'limit': 1, #500,
+        'limit': 500,
         'query': 'ts:>'+str(epoch)+' Status:Blocked Direction:Inbound -Box:"Road Warrior"'
     }
 
@@ -48,56 +43,50 @@ def handler(event, context):
     j = r.json()
 
     for i in j['results']:
-        print(i)
-        print(i['ts'])
-        # convert ts epoch to 2002-01-24 23:10:05 -00:00 format
-        print(datetime.datetime.fromtimestamp(i['ts'], datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S %z'))
+        addrs.append(i['source']['ip'])
 
-        print(i['count'])
-        print(i['protocol'])
-        
-        print(i['source']['ip'])
-        print(i['source']['portInfo']['port'])
-        print(i['destination']['ip'])
-        print(i['destination']['portInfo']['port'])
+    try:
 
+        params['cursor'] = j['next_cursor']
 
+        while j['next_cursor'] != None:
 
-#time
-#flags
-#dip
-#sip
-#version
-#proto
-#sport
-#dport
-#count
+            r = requests.get(url, headers=headers, params=params)
+            j = r.json()
 
+            for i in j['results']:
+                addrs.append(i['source']['ip'])
 
-    #try:
+            try:
+                params['cursor'] = j['next_cursor']
+            except:
+                break
 
-    #    params['cursor'] = j['next_cursor']
+    except:
+        pass
 
-    #    while j['next_cursor'] != None:
+    addrs = list(set(addrs))
+    print('Blocked IPs:', str(len(addrs)))
 
-    #        r = requests.get(url, headers=headers, params=params)
-    #        j = r.json()
+    ttl = int(datetime.datetime.now(datetime.timezone.utc).timestamp()) + 86400
 
-    #        for i in j['results']:
-    #            addrs.append(i['source']['ip'])
+    dynamodb = boto3.resource('dynamodb')
+    table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 
-    #        try:
-    #            params['cursor'] = j['next_cursor']
-    #        except:
-    #            break
+    for addr in addrs:
 
-    #except:
-    #    pass
+        if addr not in publicips:
 
-
-
+            table.put_item(
+                Item = {
+                    'pk': 'IP#',
+                    'sk': 'IP#'+str(addr),
+                    'ip': str(addr),
+                    'ttl': ttl
+                }
+            )
 
     return {
         'statusCode': 200,
-        'body': json.dumps('Export!')
+        'body': json.dumps('Exported!')
     }

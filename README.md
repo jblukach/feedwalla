@@ -1,19 +1,51 @@
-# :construction: feedwalla :construction:
+# feedwalla
 
-World IPv6 Launch Day was June 6th, 2012; because of its extremely slow adoption, the IPv4 pool was exhausted in November 2019. Amazon Web Services (AWS) started billing for IPv4 addresses on February 1st, 2024, which helped push adoption since IPv6 is still **free** for Internet connectivity.
+Feedwalla transforms **[Firewalla](https://firewalla.com)** block events — specifically **Internet Scanner** detections — into a clean, Open Source Threat Intelligence (OSINT) feed. The feed is **released daily at 10:00 AM UTC** as a **GitHub Release**, sourced from the **[Firewalla MSP](https://firewalla.net)** subscription.
 
-A few Open-Source Intelligence Threat (OSINT) feeds have included IPv6 atomic indicators.
+---
 
-Unfortunately, the required effort to sustain threat feeds has led to lost project maintainers or seen them migrate behind a wall.
+## ✨ What is Feedwalla?
 
-I wish I had more IPv6 indicators since I finally bit the bullet with my networks.
+Feedwalla is an open-source threat intelligence project that publishes **atomic indicators** observed by Firewalla networks. By focusing on **actual firewall blocks** triggered by **internet-wide scanning activity**, Feedwalla provides defenders with timely and practical indicators suitable for automated ingestion.
 
-Feedwalla provides a Threat Feed focusing on Internet Scanners using Firewalla data targeting North Dakota, including blocked IPv6 connections.
+The goal is simple:
 
-https://firewalla.com
+- Turn real firewall blocks into actionable OSINT  
+- Keep indicators atomic and easy to consume  
+- Release consistently, predictably, and transparently  
 
-API access from the Firewalla MSP subscription enables automation options.
+---
 
-https://firewalla.net
+## 🔌 How to Use
 
-IP addresses export every five minutes to generate the hourly feed.
+### Manual Download
+
+Download the latest feed directly from the **GitHub Releases** page.
+
+### Automated Ingestion
+
+Feedwalla is designed for easy integration with:
+
+- Firewalls  
+- SIEM platforms  
+- SOAR pipelines  
+- IDS / IPS systems  
+- Custom scripts  
+
+---
+
+## 🎯 Intended Use Cases
+
+- Enrich firewall blocklists  
+- Correlate scanner activity across environments  
+- Threat hunting  
+- Detection engineering  
+- Security research  
+
+---
+
+## ⚠️ Disclaimer
+
+- Indicators are provided **as-is**  
+- Inclusion does **not guarantee malicious intent**, only observed scanner behavior  
+- Always validate indicators against your own environment and risk tolerance  
