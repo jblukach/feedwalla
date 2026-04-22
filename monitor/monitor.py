@@ -36,8 +36,6 @@ def handler(event, context):
                     Message = json.dumps(result, indent=4),
                     Subject = 'Suspect IP Alert'
                 )
-            else:
-                print(f"IP {i['publicIP']} is {result['status']}.")
 
     return {
         'statusCode': 200,
