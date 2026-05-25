@@ -12,9 +12,7 @@ from aws_cdk import (
     aws_lambda as _lambda,
     aws_logs as _logs,
     aws_s3 as _s3,
-    aws_secretsmanager as _secrets,
-    aws_sns as _sns,
-    aws_sns_subscriptions as _subs
+    aws_secretsmanager as _secrets
 )
 
 from constructs import Construct
@@ -36,18 +34,6 @@ class FeedwallaStack(Stack):
             self, 'bucket',
             bucket_name = 'packages-use2-lukach-io'
         )
-
-    ### SNS TOPIC ###
-
-        topic = _sns.Topic(
-            self, 'topic',
-            topic_name = 'FeedwallaAlert',
-            display_name = 'FeedwallaAlert'
-        )
-
-        subscription = _subs.EmailSubscription('hello@lukach.io')
-
-        topic.add_subscription(subscription)
 
     ### LAMBDA LAYER ###
 
@@ -121,8 +107,7 @@ class FeedwallaStack(Stack):
             _iam.PolicyStatement(
                 actions = [
                     'dynamodb:PutItem',
-                    'dynamodb:Query',
-                    'sns:Publish'
+                    'dynamodb:Query'
                 ],
                 resources = [
                     '*'
@@ -172,48 +157,6 @@ class FeedwallaStack(Stack):
 
         exportevent.add_target(
             _targets.LambdaFunction(export)
-        )
-
-    ### MONITOR LAMBDA ###
-
-        monitor = _lambda.Function(
-            self, 'monitor',
-            runtime = _lambda.Runtime.PYTHON_3_13,
-            architecture = _lambda.Architecture.ARM_64,
-            code = _lambda.Code.from_asset('monitor'),
-            handler = 'monitor.handler',
-            environment = dict(
-                SECRET_MGR_ARN = secret.secret_arn,
-                SNS_TOPIC_ARN = topic.topic_arn
-            ),
-            timeout = Duration.seconds(900),
-            memory_size = 512,
-            role = role,
-            layers = [
-                requests
-            ]
-        )
-
-        monitorlogs = _logs.LogGroup(
-            self, 'monitorlogs',
-            log_group_name = '/aws/lambda/'+monitor.function_name,
-            retention = _logs.RetentionDays.ONE_WEEK,
-            removal_policy = RemovalPolicy.DESTROY
-        )
-
-        monitorevent = _events.Rule(
-            self, 'monitorevent',
-            schedule = _events.Schedule.cron(
-                minute = '20',
-                hour = '11',
-                month = '*',
-                week_day = '*',
-                year = '*'
-            )
-        )
-
-        monitorevent.add_target(
-            _targets.LambdaFunction(monitor)
         )
 
     ### RELEASE LAMBDA ###
